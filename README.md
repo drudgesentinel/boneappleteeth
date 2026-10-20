@@ -1,6 +1,6 @@
 # Bone Apple Teeth
 
-A simple personal recipe book built with **Express 5**, **Svelte 5**, and **PostgreSQL**. Browse and search recipes publicly. Register with a username and password to contribute recipes, then edit or delete your own contributions. Each recipe is a TOML document stored verbatim in a PostgreSQL `text` column, including comments and formatting. The API parses and validates documents before saving.
+A simple personal recipe book built with **Express 5**, **Svelte 5**, and **PostgreSQL**. Browse and search recipes publicly. Register with a username and password to contribute recipes, then edit or delete your own contributions. The editor collects individual recipe fields, ingredient rows, and instruction steps. The backend converts submitted recipe objects to TOML, validates them, and stores them in a PostgreSQL `text` column.
 
 ## Run locally
 
@@ -48,21 +48,21 @@ ingredients = ["1 slice sourdough", "1 ripe tomato", "Olive oil and salt"]
 steps = ["Toast the bread.", "Slice the tomato, arrange on toast, and season."]
 ```
 
-`title`, `ingredients`, and `steps` are required. Ingredients are strings or inline tables with `name` and optional `cost`; `steps` contains the cooking instructions in order. Both arrays must contain at least one nonempty string. The optional `reference` field is an absolute HTTP or HTTPS link to the inspiring recipe, displayed separately from contributor attribution. Omit it when there is no reference. `servings` and `minutes`, when supplied, must be positive integers. Other TOML fields are preserved. Documents are limited to 100 KB.
+`title`, `ingredients`, and `steps` are required. Ingredients are strings or inline tables with `name`, optional `quantity`, and optional `cost`; `steps` contains the cooking instructions in order. Both arrays must contain at least one nonempty string. The optional `reference` field is an absolute HTTP or HTTPS link to the inspiring recipe, displayed separately from contributor attribution. Omit it when there is no reference. `servings` and `minutes`, when supplied, must be positive integers. Additional metadata is retained when editing existing recipes; form saves regenerate TOML formatting and remove TOML comments. Documents are limited to 100 KB.
 
 ### Ingredient costs
 
-Use an inline table for each ingredient that has a cost. The amount is the estimated cost of the quantity used in this recipe, rather than the price of a whole package.
+Use an inline table for each ingredient that has a quantity or cost. Quantity accepts nonempty text such as `"200 g"`, `"1/2 cup"`, or `"to taste"`, or a nonnegative number. The editor has separate ingredient name and quantity fields; legacy strings remain supported. The amount is the estimated cost of the quantity used in this recipe, rather than the price of a whole package.
 
 ```toml
 ingredients = [
-  { name = "200 g spaghetti", cost = { amount = 1.20, currency = "USD" } },
+  { name = "spaghetti", quantity = "200 g", cost = { amount = 1.20, currency = "USD" } },
   { name = "1 lemon", cost = { amount = 0.60, currency = "USD" } },
   "Salt and pepper", # cost can be omitted
 ]
 ```
 
-Plain strings remain supported, and both forms can be mixed. Each supplied cost requires a nonnegative amount and currency. All costs in a recipe must use the same currency. Ingredient costs appear beside their ingredients and are searchable by ingredient name. When every ingredient has a cost, the app calculates a whole-recipe total; missing prices are not treated as zero. An explicit `[cost]` total takes precedence over the calculated total. Remove `[cost]` to use the automatic total.
+Plain strings remain supported, and both forms can be mixed. Each supplied ingredient cost requires a nonnegative numeric amount or nonempty text (for example `"1.99/pound"`), plus a currency. Costs are displayed as entered. Total recipe cost is supplied separately by the user; ingredient costs are never automatically totaled. All costs in a recipe must use the same currency. Ingredient costs appear beside their ingredients and are searchable by ingredient name. The optional recipe total is entered by the user and may also contain text.
 
 ### Optional images, nutrition, and cost
 
@@ -85,7 +85,7 @@ amount = 6.50
 currency = "USD"
 ```
 
-All three additions are optional. Nutrition values and cost must be finite, nonnegative numbers. Cost requires both `amount` and a three-letter uppercase currency code. These values are supplied by contributors, not calculated automatically.
+All three additions are optional. Nutrition values must be finite, nonnegative numbers. Cost amounts accept nonnegative numbers or nonempty text. Cost requires both `amount` and a three-letter uppercase currency code. These values are supplied by contributors, not calculated automatically.
 
 `POST /api/images` accepts raw image bytes with the matching `Content-Type` and session cookie, and returns `{ "image": "/api/images/<uuid>" }`. `GET /api/images/:imageId` returns the stored image. Restart the server to create the image table on an existing installation.
 
@@ -95,7 +95,7 @@ All three additions are optional. Nutrition values and cost must be finite, nonn
 - `src/server/`: Express routes, database initialization, and TOML validation.
 - `tests/`: validation and HTTP API tests.
 
-`GET /api/recipes` lists recipes. `POST /api/recipes` creates one; `PUT /api/recipes/:id` updates it. Both writes accept JSON `{ "toml": "..." }`. `DELETE /api/recipes/:id` deletes one. Records include their ID, original TOML, parsed recipe, and timestamps. Search runs locally across titles, descriptions, tags, and ingredients.
+`GET /api/recipes` lists recipes. `POST /api/recipes` creates one; `PUT /api/recipes/:id` updates it. Both writes accept JSON `{ "recipe": { "title": "Toast", "ingredients": ["Bread"], "steps": ["Toast the bread."] } }`; the backend serializes and validates TOML before storing it. Legacy JSON `{ "toml": "..." }` requests remain supported and retain their original document formatting. `DELETE /api/recipes/:id` deletes one. Records include their ID, original TOML, parsed recipe, and timestamps. Search runs locally across titles, descriptions, tags, and ingredients.
 
 ## Accounts and access
 

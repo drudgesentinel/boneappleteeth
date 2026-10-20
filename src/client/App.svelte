@@ -1,7 +1,7 @@
 <script>
   import { onMount } from 'svelte';
-  import { parse } from 'smol-toml';
-  import { exampleToml, recipeCost } from '../server/recipe.js';
+  import { recipeCost } from '../server/recipe.js';
+  import { recipeForm, formRecipe, nutrients } from './recipe-form.js';
   let user = $state(null);
   let showAuth = $state(false);
   let username = $state('');
@@ -13,7 +13,7 @@
   let selected = $state(null);
   let search = $state('');
   let editing = $state(false);
-  let draft = $state('');
+  let draft = $state(recipeForm());
   let error = $state('');
   let loading = $state(true);
   let saving = $state(false);
@@ -107,7 +107,7 @@
       user = null;
       editing = false;
       deleting = false;
-      draft = '';
+      draft = recipeForm();
       search = '';
     } catch (e) {
       error = e.message;
@@ -122,7 +122,7 @@
       return;
     }
     selected = item;
-    draft = item?.toml || exampleToml;
+    draft = recipeForm(item?.recipe);
     editing = true;
     error = '';
     deleting = false;
@@ -144,25 +144,12 @@
         file.size > 5 * 1024 * 1024
       )
         throw new Error('Choose a PNG, JPEG, or WebP image up to 5 MB.');
-      const parsed = parse(draft);
-      // Only touch the root-level image assignment; preserve the rest of the document.
-      const rootEnd = draft.search(/^\s*\[/m);
-      const root = rootEnd < 0 ? draft : draft.slice(0, rootEnd);
-      const assignment = /^image\s*=.*$/m;
-      if (parsed.image !== undefined && !assignment.test(root))
-        throw new Error(
-          'Put image on a single line at the top of the TOML before replacing it.',
-        );
       const result = await request('/api/images', {
         method: 'POST',
         headers: { 'Content-Type': file.type },
         body: file,
       });
-      const line = `image = "${result.image}"`;
-      draft =
-        parsed.image === undefined
-          ? line + '\n' + draft
-          : root.replace(assignment, line) + draft.slice(root.length);
+      draft.image = result.image;
     } catch (e) {
       error = e.message;
     } finally {
@@ -179,7 +166,7 @@
         {
           method: selected ? 'PUT' : 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ toml: draft }),
+          body: JSON.stringify({ recipe: formRecipe($state.snapshot(draft)) }),
         },
       );
       recipes = [item, ...recipes.filter((row) => row.id !== item.id)];
@@ -198,6 +185,7 @@
       await request(`/api/recipes/${selected.id}`, {
         method: 'DELETE',
         headers: { 'Content-Type': 'application/json' },
+        body: '{}',
       });
       recipes = recipes.filter((row) => row.id !== selected.id);
       selected = recipes[0] || null;
@@ -357,8 +345,7 @@
             </div>
             <h2>{selected ? 'Edit recipe' : 'A new favorite'}</h2>
             <p class="muted">
-              Write your recipe in TOML. Comments and formatting are saved with
-              it.
+              Add your recipe details, ingredients, and instructions.
             </p>
             <form
               onsubmit={(event) => {
@@ -366,28 +353,181 @@
                 save();
               }}
             >
-              <label class="editor-label" for="image-upload"
-                >Recipe image (optional)</label
-              >
-              <input
-                id="image-upload"
-                type="file"
-                accept="image/png,image/jpeg,image/webp"
-                onchange={uploadImage}
-                disabled={saving}
-              />
-              <p class="muted">
-                PNG, JPEG, or WebP, up to 5 MB. Uploading adds an image path to
-                your TOML. Remove the image line to remove it from the recipe.
-              </p>
-              <label class="editor-label" for="toml">Recipe TOML</label
-              ><textarea
-                id="toml"
-                bind:value={draft}
-                spellcheck="false"
-                required
-                disabled={saving}
-              ></textarea>
+              <fieldset disabled={saving} class="recipe-fields">
+                <label
+                  >Title<input
+                    bind:value={draft.title}
+                    required
+                    maxlength="200"
+                  /></label
+                >
+                <label
+                  >Description<textarea
+                    class="short-text"
+                    bind:value={draft.description}
+                  ></textarea></label
+                >
+                <div class="field-grid">
+                  <label
+                    >Servings<input
+                      type="number"
+                      min="1"
+                      step="1"
+                      bind:value={draft.servings}
+                    /></label
+                  >
+                  <label
+                    >Time (minutes)<input
+                      type="number"
+                      min="1"
+                      step="1"
+                      bind:value={draft.minutes}
+                    /></label
+                  >
+                </div>
+                <label
+                  >Tags (comma separated)<input
+                    bind:value={draft.tags}
+                    placeholder="weeknight, vegetarian"
+                  /></label
+                >
+                <label
+                  >Inspiration link (optional)<input
+                    type="url"
+                    bind:value={draft.reference}
+                  /></label
+                >
+                <label for="image-upload">Recipe image (optional)</label>
+                <input
+                  id="image-upload"
+                  type="file"
+                  accept="image/png,image/jpeg,image/webp"
+                  onchange={uploadImage}
+                />
+                <p class="muted">PNG, JPEG, or WebP, up to 5 MB.</p>
+                {#if draft.image}
+                  <img
+                    class="recipe-image"
+                    src={draft.image}
+                    alt="Recipe preview"
+                  />
+                  <button type="button" onclick={() => delete draft.image}
+                    >Remove image</button
+                  >
+                {/if}
+                <h3>Ingredients</h3>
+                <p class="muted">
+                  Enter each ingredient and its quantity separately. Costs are
+                  optional and apply to the quantity used.
+                </p>
+                {#each draft.ingredients as ingredient, i}
+                  <div class="item-fields">
+                    <label
+                      >Ingredient {i + 1}<input
+                        bind:value={ingredient.name}
+                        required
+                      /></label
+                    >
+                    <label
+                      >Quantity<input
+                        type="text"
+                        bind:value={ingredient.quantity}
+                        placeholder="200 g, 1/2 cup, or to taste"
+                      /></label
+                    >
+                    <div class="field-grid">
+                      <label
+                        >Cost (optional)<input
+                          type="text"
+                          placeholder="1.99 or 1.99/pound"
+                          bind:value={ingredient.cost.amount}
+                        /></label
+                      >
+                      <label
+                        >Currency<input
+                          bind:value={ingredient.cost.currency}
+                          pattern={'[A-Z]{3}'}
+                          required={ingredient.cost.amount !== '' &&
+                            ingredient.cost.amount != null}
+                        /></label
+                      >
+                    </div>
+                    <button
+                      type="button"
+                      disabled={draft.ingredients.length === 1}
+                      onclick={() => draft.ingredients.splice(i, 1)}
+                      >Remove ingredient {i + 1}</button
+                    >
+                  </div>
+                {/each}
+                <button
+                  type="button"
+                  onclick={() =>
+                    draft.ingredients.push({
+                      name: '',
+                      quantity: '',
+                      cost: {
+                        amount: '',
+                        currency: draft.cost.currency || 'USD',
+                      },
+                    })}>+ Add ingredient</button
+                >
+                <h3>Instructions</h3>
+                {#each draft.steps as step, i}
+                  <div class="item-fields">
+                    <label
+                      >Step {i + 1}<textarea
+                        class="short-text"
+                        bind:value={draft.steps[i]}
+                        required
+                      ></textarea></label
+                    >
+                    <button
+                      type="button"
+                      disabled={draft.steps.length === 1}
+                      onclick={() => draft.steps.splice(i, 1)}
+                      >Remove step {i + 1}</button
+                    >
+                  </div>
+                {/each}
+                <button type="button" onclick={() => draft.steps.push('')}
+                  >+ Add step</button
+                >
+                <h3>Nutrition per serving (optional)</h3>
+                <div class="field-grid">
+                  {#each Object.entries(nutrients) as [key, label]}
+                    <label
+                      >{label}<input
+                        type="number"
+                        min="0"
+                        step="any"
+                        bind:value={draft.nutrition[key]}
+                      /></label
+                    >
+                  {/each}
+                </div>
+                <h3>Total recipe cost (optional)</h3>
+                <p class="muted">
+                  Enter the total cost as you want it displayed. Use the same
+                  currency for all costs.
+                </p>
+                <div class="field-grid">
+                  <label
+                    >Amount<input
+                      type="text"
+                      bind:value={draft.cost.amount}
+                    /></label
+                  >
+                  <label
+                    >Currency<input
+                      bind:value={draft.cost.currency}
+                      pattern={'[A-Z]{3}'}
+                      required={draft.cost.amount !== '' &&
+                        draft.cost.amount != null}
+                    /></label
+                  >
+                </div>
+              </fieldset>
               <div class="actions">
                 <button class="primary" disabled={saving}
                   >{saving ? 'Saving…' : 'Save recipe'}</button
@@ -459,7 +599,9 @@
             {#if estimatedCost}<p class="muted">
                 Estimated cost (whole recipe): <strong
                   >{estimatedCost.currency}
-                  {estimatedCost.amount.toFixed(2)}</strong
+                  {typeof estimatedCost.amount === 'number'
+                    ? estimatedCost.amount.toFixed(2)
+                    : estimatedCost.amount}</strong
                 >
               </p>{/if}
             <div class="recipe-body">
@@ -469,11 +611,17 @@
                   {#each selected.recipe.ingredients as ingredient}<li>
                       {typeof ingredient === 'string'
                         ? ingredient
-                        : ingredient.name}
+                        : [ingredient.quantity, ingredient.name]
+                            .filter(
+                              (value) => value !== undefined && value !== '',
+                            )
+                            .join(' ')}
                       {#if typeof ingredient !== 'string' && ingredient.cost}<span
                           class="ingredient-cost"
                           >{ingredient.cost.currency}
-                          {ingredient.cost.amount.toFixed(2)}</span
+                          {typeof ingredient.cost.amount === 'number'
+                            ? ingredient.cost.amount.toFixed(2)
+                            : ingredient.cost.amount}</span
                         >{/if}
                     </li>{/each}
                 </ul>

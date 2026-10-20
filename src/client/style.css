@@ -453,3 +453,33 @@ h3 small {
   color: #818471;
   margin-top: 4px;
 }
+
+.recipe-fields {
+  border: 0;
+  padding: 0;
+  margin: 0;
+  min-width: 0;
+}
+.recipe-fields label {
+  display: block;
+  font-size: 13px;
+  margin: 16px 0 8px;
+}
+.recipe-fields input,
+.recipe-fields textarea {
+  margin-top: 8px;
+}
+.short-text {
+  min-height: 90px;
+  font-family: inherit;
+}
+.field-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+  gap: 12px;
+}
+.item-fields {
+  border-bottom: 1px solid #e7e7da;
+  padding-bottom: 16px;
+  margin-bottom: 16px;
+}

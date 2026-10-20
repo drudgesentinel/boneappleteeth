@@ -3,7 +3,7 @@ import { randomUUID } from 'node:crypto';
 import { validateImage } from './image.js';
 import { installAuth } from './auth.js';
 import path from 'node:path';
-import { validateRecipe } from './recipe.js';
+import { validateRecipe, recipeToToml } from './recipe.js';
 export async function createApp(pool) {
   const app = express();
   app.disable('x-powered-by');
@@ -61,7 +61,11 @@ export async function createApp(pool) {
   async function validate(req, res, next) {
     let recipe;
     try {
-      recipe = validateRecipe(req.body?.toml);
+      req.recipeToml =
+        req.body?.recipe !== undefined
+          ? recipeToToml(req.body.recipe)
+          : req.body?.toml;
+      recipe = validateRecipe(req.recipeToml);
     } catch (error) {
       return res.status(400).json({ error: error.message });
     }
@@ -80,14 +84,14 @@ export async function createApp(pool) {
   app.post('/api/recipes', validate, async (req, res) => {
     const { rows } = await pool.query(
       'INSERT INTO recipes (toml, user_id) VALUES ($1, $2) RETURNING *',
-      [req.body.toml, req.user.id],
+      [req.recipeToml, req.user.id],
     );
     res.status(201).json(serialize({ ...rows[0], author: req.user.username }));
   });
   app.put('/api/recipes/:id', validate, async (req, res) => {
     const { rows } = await pool.query(
       'UPDATE recipes SET toml = $1, updated_at = now() WHERE id = $2 AND user_id = $3 RETURNING *',
-      [req.body.toml, req.params.id, req.user.id],
+      [req.recipeToml, req.params.id, req.user.id],
     );
     if (!rows.length)
       return res.status(404).json({ error: 'Recipe not found.' });

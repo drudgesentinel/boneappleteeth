@@ -1,4 +1,4 @@
-import { parse } from 'smol-toml';
+import { parse, stringify } from 'smol-toml';
 export const exampleToml = `title = "Lemony pantry pasta"
 description = "A little sunshine, made with what you have."
 servings = 2
@@ -32,6 +32,19 @@ steps = [
 # amount = 6.50
 # currency = "USD"
 `;
+export function recipeToToml(recipe) {
+  if (!recipe || typeof recipe !== 'object' || Array.isArray(recipe))
+    throw new Error('Provide a recipe object.');
+  let toml;
+  try {
+    toml = stringify(recipe);
+  } catch {
+    throw new Error('Recipe fields could not be converted to TOML.');
+  }
+  validateRecipe(toml);
+  return toml;
+}
+
 export function validateRecipe(toml) {
   if (typeof toml !== 'string' || Buffer.byteLength(toml) > 100_000)
     throw new Error('Provide a TOML document smaller than 100 KB.');
@@ -60,13 +73,19 @@ export function validateRecipe(toml) {
           typeof ingredient.name === 'string' &&
           ingredient.name.trim() &&
           Object.keys(ingredient).every((key) =>
-            ['name', 'cost'].includes(key),
+            ['name', 'quantity', 'cost'].includes(key),
           ) &&
-          (ingredient.cost === undefined || validCost(ingredient.cost)),
+          (ingredient.quantity === undefined ||
+            (typeof ingredient.quantity === 'string' &&
+              ingredient.quantity.trim().length > 0) ||
+            (typeof ingredient.quantity === 'number' &&
+              Number.isFinite(ingredient.quantity) &&
+              ingredient.quantity >= 0)) &&
+          (ingredient.cost === undefined || validCost(ingredient.cost, true)),
     )
   )
     throw new Error(
-      'ingredients must be a nonempty array of strings or tables with a name and optional cost (nonnegative amount and uppercase currency).',
+      'ingredients must be a nonempty array of strings or tables with a name, optional quantity (nonempty text or nonnegative number), and optional cost (nonnegative number or nonempty text amount and uppercase currency).',
     );
   if (
     !Array.isArray(recipe.steps) ||
@@ -126,9 +145,9 @@ export function validateRecipe(toml) {
   }
   if (recipe.cost !== undefined) {
     const cost = recipe.cost;
-    if (!validCost(cost))
+    if (!validCost(cost, true))
       throw new Error(
-        'cost requires a nonnegative amount and a three-letter uppercase currency code (for example USD), for the entire recipe.',
+        'cost requires a nonnegative number or nonempty text amount and a three-letter uppercase currency code (for example USD), for the entire recipe.',
       );
   }
   const currencies = recipe.ingredients
@@ -148,14 +167,17 @@ export function validateRecipe(toml) {
   return recipe;
 }
 
-function validCost(cost) {
+function validCost(cost, allowText = false) {
   return (
     cost &&
     !Array.isArray(cost) &&
     typeof cost === 'object' &&
-    typeof cost.amount === 'number' &&
-    Number.isFinite(cost.amount) &&
-    cost.amount >= 0 &&
+    ((typeof cost.amount === 'number' &&
+      Number.isFinite(cost.amount) &&
+      cost.amount >= 0) ||
+      (allowText &&
+        typeof cost.amount === 'string' &&
+        cost.amount.trim().length > 0)) &&
     typeof cost.currency === 'string' &&
     /^[A-Z]{3}$/.test(cost.currency) &&
     Object.keys(cost).every((key) => ['amount', 'currency'].includes(key))
@@ -163,22 +185,5 @@ function validCost(cost) {
 }
 
 export function recipeCost(recipe) {
-  if (recipe.cost) return recipe.cost;
-  if (
-    !recipe.ingredients.length ||
-    !recipe.ingredients.every((ingredient) => validCost(ingredient?.cost))
-  )
-    return null;
-  const currency = recipe.ingredients[0].cost.currency;
-  if (
-    !recipe.ingredients.every(
-      (ingredient) => ingredient.cost.currency === currency,
-    )
-  )
-    return null;
-  const amount = recipe.ingredients.reduce(
-    (sum, ingredient) => sum + ingredient.cost.amount,
-    0,
-  );
-  return Number.isFinite(amount) ? { amount, currency } : null;
+  return recipe.cost || null;
 }

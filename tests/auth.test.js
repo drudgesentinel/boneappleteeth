@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createApp } from '../src/server/app.js';
 import { hashPassword, verifyPassword } from '../src/server/auth.js';
-import { exampleToml } from '../src/server/recipe.js';
+import { exampleToml, validateRecipe } from '../src/server/recipe.js';
 
 test('password hashes use independent salts and verify only the right password', async () => {
   const hash = await hashPassword('a-long-test-password');
@@ -192,16 +192,27 @@ test('HTTP authentication, recipe ownership, validation, and logout', async (t) 
       await call(
         `/recipes/${id}`,
         'PUT',
-        { toml: exampleToml + '\n# updated' },
+        { recipe: { ...validateRecipe(exampleToml), title: 'Updated recipe' } },
         alice,
       )
     ).status,
     200,
   );
+  const updated = await (await call('/recipes')).json();
+  assert.equal(updated[0].recipe.title, 'Updated recipe');
+  assert.equal(validateRecipe(updated[0].toml).title, 'Updated recipe');
   assert.equal(
-    (await call(`/recipes/${id}`, 'DELETE', undefined, alice)).status,
-    204,
+    (
+      await call(
+        `/recipes/${id}`,
+        'PUT',
+        { recipe: { title: 'Incomplete' } },
+        alice,
+      )
+    ).status,
+    400,
   );
+  assert.equal((await call(`/recipes/${id}`, 'DELETE', {}, alice)).status, 204);
   assert.equal(
     (
       await call('/auth/login', 'POST', {

@@ -114,7 +114,6 @@ test('rejects invalid nutrition and cost values', () => {
     '[cost]\namount = -1\ncurrency = "USD"',
     '[cost]\namount = inf\ncurrency = "USD"',
     '[cost]\namount = 1\ncurrency = "usd"',
-    '[cost]\namount = "10"\ncurrency = "USD"',
   ])
     assert.throws(
       () => validateRecipe(exampleToml + '\n' + extra),
@@ -160,24 +159,15 @@ test('supports mixed ingredients and validates ingredient-level prices', () => {
     assert.throws(() => pricedRecipe(ingredients), /ingredients/);
 });
 
-test('totals fully priced ingredients without treating missing costs as zero', () => {
-  assert.deepEqual(
-    recipeCost(
-      pricedRecipe(
-        '[{name = "Bread", cost = {amount = 1.25, currency = "USD"}}, {name = "Salt", cost = {amount = 0, currency = "USD"}}]',
-      ),
-    ),
-    { amount: 1.25, currency: 'USD' },
-  );
+test('ingredient prices are never automatically totaled', () => {
   assert.equal(
     recipeCost(
       pricedRecipe(
-        '[{name = "Bread", cost = {amount = 1.25, currency = "USD"}}, "Salt"]',
+        '[{name = "Bread", cost = {amount = 1.25, currency = "USD"}}]',
       ),
     ),
     null,
   );
-  assert.equal(recipeCost(pricedRecipe('["Bread"]')), null);
 });
 
 test('explicit recipe total overrides ingredient sum', () => {
