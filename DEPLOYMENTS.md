@@ -84,6 +84,19 @@ Password updates revoke existing sessions. These application accounts are separa
 
 See the systemd references for [service lifecycle](https://www.freedesktop.org/software/systemd/man/latest/systemd.service.html) and [execution settings](https://www.freedesktop.org/software/systemd/man/latest/systemd.exec.html).
 
+## Update helper
+
+The server checkout uses the GitHub `origin` remote. Push local commits to GitHub before updating the VPS. The helper requires a clean checkout and a fast-forward update; it never resets or discards local work. It installs dependencies, runs tests, builds, reinstalls the systemd unit, and checks the local API. Configuration in `/etc/hotdogcart` and PostgreSQL data are retained. Nginx configuration changes require separate review and reload.
+
+Run as root on the VPS:
+
+```sh
+cp /opt/hotdogcart/deploy/update.sh /tmp/hotdogcart-update.sh
+bash /tmp/hotdogcart-update.sh
+```
+
+Copying the helper outside the checkout lets Git replace its source during an update. The service is stopped while files change. If installation, tests, build, or the health check fails, it remains stopped; inspect the error and `journalctl -u hotdogcart.service`, fix the problem, and rerun the helper. There is no automatic rollback. Use `git -C /opt/hotdogcart log -1` to inspect the deployed commit.
+
 ## VPS deployment with Nginx
 
 [example.com.conf](deploy/nginx/example.com.conf) terminates HTTPS for `example.com`, redirects HTTP to HTTPS, and proxies the frontend and API to Express on `127.0.0.1:3000`. It allows the application's 5 MB image uploads. This example assumes Nginx and the application run directly on the same VPS; container networking requires different upstream and bind settings.
