@@ -104,6 +104,8 @@ export function validateRecipe(toml) {
       !recipe.tags.every((tag) => typeof tag === 'string'))
   )
     throw new Error('tags must be an array of strings.');
+  if (typeof recipe.reference === 'string' && !recipe.reference.trim())
+    delete recipe.reference;
   if (recipe.reference !== undefined) {
     let url;
     try {

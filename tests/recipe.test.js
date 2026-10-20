@@ -60,11 +60,20 @@ test('reference is optional and accepts HTTP and HTTPS inspiration links', () =>
   }
 });
 
-test('reference rejects non-string, empty, relative, and unsafe links', () => {
+test('blank optional references are treated as omitted', () => {
+  for (const reference of ['', '   ', '\t']) {
+    assert.equal(
+      validateRecipe(exampleToml + '\nreference = ' + JSON.stringify(reference))
+        .reference,
+      undefined,
+    );
+  }
+});
+
+test('reference rejects non-string, relative, and unsafe links', () => {
   for (const value of [
     '42',
     '[]',
-    '""',
     '"/recipe"',
     '"not a URL"',
     '"javascript:alert(1)"',

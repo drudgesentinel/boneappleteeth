@@ -171,7 +171,7 @@ ingredients = ["1 slice sourdough", "1 ripe tomato", "Olive oil and salt"]
 steps = ["Toast the bread.", "Slice the tomato, arrange on toast, and season."]
 ```
 
-`title`, `ingredients`, and `steps` are required. Ingredients are strings or inline tables with `name`, optional `quantity`, and optional `cost`; `steps` contains the cooking instructions in order. Both arrays must contain at least one entry; ingredient names and instruction strings must be nonempty. The optional `reference` field is an absolute HTTP or HTTPS link to the inspiring recipe, displayed separately from contributor attribution. Omit it when there is no reference. `servings` and `minutes`, when supplied, must be positive integers. Additional metadata is retained when editing existing recipes; form saves regenerate TOML formatting and remove TOML comments. Documents are limited to 100 KB.
+`title`, `ingredients`, and `steps` are required. Ingredients are strings or inline tables with `name`, optional `quantity`, and optional `cost`; `steps` contains the cooking instructions in order. Both arrays must contain at least one entry; ingredient names and instruction strings must be nonempty. The optional `reference` field is an absolute HTTP or HTTPS link to the inspiring recipe, displayed separately from contributor attribution. Omit it or leave it blank when there is no reference; blank strings are treated as absent. `servings` and `minutes`, when supplied, must be positive integers. Additional metadata is retained when editing existing recipes; form saves regenerate TOML formatting and remove TOML comments. Documents are limited to 100 KB.
 
 #### Ingredient costs
 

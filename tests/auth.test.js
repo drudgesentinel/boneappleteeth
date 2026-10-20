@@ -311,13 +311,14 @@ test('TOML file import and public downloads preserve the backend document', asyn
     '"'.repeat(60000) +
     '\n' +
     example +
-    '\nsource = "Family cookbook"\n';
+    '\nsource = "Family cookbook"\nreference = ""\n';
   const imported = await importFile(source, cookie);
   assert.equal(imported.status, 201);
   const item = await imported.json();
   assert.equal(item.author, 'importer');
   assert.equal(item.toml, source);
   assert.equal(item.recipe.source, 'Family cookbook');
+  assert.equal(item.recipe.reference, undefined);
   const download = await fetch(`${base}/api/recipes/${item.id}/toml`);
   assert.equal(download.status, 200);
   assert.match(
