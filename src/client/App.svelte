@@ -133,6 +133,38 @@
     deleting = false;
     error = '';
   }
+  async function importToml(event) {
+    const file = event.currentTarget.files?.[0];
+    if (!file) return;
+    saving = true;
+    error = '';
+    try {
+      if (file.size > 100_000)
+        throw new Error('Choose a TOML recipe file up to 100 KB.');
+      const bytes = await file.arrayBuffer();
+      let toml;
+      try {
+        toml = new TextDecoder('utf-8', { fatal: true }).decode(bytes);
+      } catch {
+        throw new Error('Choose a UTF-8 encoded TOML file.');
+      }
+      const item = await request('/api/recipes', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ toml }),
+      });
+      recipes = [item, ...recipes];
+      selected = item;
+      search = '';
+      editing = false;
+      deleting = false;
+    } catch (e) {
+      error = e.message;
+    } finally {
+      saving = false;
+      event.target.value = '';
+    }
+  }
   async function uploadImage(event) {
     const file = event.currentTarget.files?.[0];
     if (!file) return;
@@ -292,6 +324,28 @@
             <h2>The recipe box <span>{recipes.length}</span></h2>
             <button class="primary" onclick={() => edit(null)} disabled={saving}
               >+ Add recipe</button
+            >
+          </div>
+          <div class="toml-import">
+            {#if user}
+              <label for="toml-upload">Import recipe TOML</label>
+              <input
+                id="toml-upload"
+                type="file"
+                accept=".toml,application/toml,text/plain"
+                onchange={importToml}
+                disabled={saving || editing}
+              />
+              <p class="muted">
+                One recipe per file, up to 100 KB. Importing adds a new recipe.
+              </p>
+            {:else}
+              <button onclick={() => (showAuth = true)}
+                >Sign in to import TOML</button
+              >
+            {/if}
+            <a href="/api/recipes/example.toml" download
+              >Download example TOML</a
             >
           </div>
           <label class="search"
@@ -543,6 +597,11 @@
           {:else if selected}
             <div class="detail-top">
               <div class="eyebrow">FROM THE RECIPE BOX</div>
+              <a
+                class="download-toml"
+                href={`/api/recipes/${selected.id}/toml`}
+                download>Download TOML</a
+              >
               {#if user && selected.user_id === user.id}<button
                   onclick={() => edit(selected)}
                   disabled={saving}>Edit recipe ↗</button
@@ -610,11 +669,11 @@
                   {#each selected.recipe.ingredients as ingredient}<li>
                       {typeof ingredient === 'string'
                         ? ingredient
-                        : [ingredient.quantity, ingredient.name]
+                        : [ingredient.name, ingredient.quantity]
                             .filter(
                               (value) => value !== undefined && value !== '',
                             )
-                            .join(' ')}
+                            .join(' · ')}
                       {#if typeof ingredient !== 'string' && ingredient.cost}<span
                           class="ingredient-cost"
                           >{ingredient.cost.currency}

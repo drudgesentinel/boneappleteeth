@@ -9,7 +9,8 @@ export async function createApp(pool) {
   app.disable('x-powered-by');
   if (process.env.TRUST_PROXY === 'loopback')
     app.set('trust proxy', 'loopback');
-  app.use(express.json({ limit: '110kb' }));
+  // A 100 KB TOML file can expand up to sixfold when JSON-escaped.
+  app.use(express.json({ limit: '610kb' }));
   app.use('/api', (req, res, next) => {
     res.set('Cache-Control', 'no-store');
     next();
@@ -59,6 +60,27 @@ export async function createApp(pool) {
       'SELECT recipes.*, users.username AS author FROM recipes LEFT JOIN users ON users.id = recipes.user_id ORDER BY recipes.updated_at DESC, recipes.id DESC',
     );
     res.json(rows.map(serialize));
+  });
+  app.get('/api/recipes/example.toml', (req, res) => {
+    res
+      .type('application/toml')
+      .download(
+        path.resolve('assets/example-recipe.toml'),
+        'example-recipe.toml',
+      );
+  });
+  app.get('/api/recipes/:id/toml', async (req, res) => {
+    const { rows } = await pool.query(
+      'SELECT toml FROM recipes WHERE id = $1',
+      [req.params.id],
+    );
+    if (!rows.length)
+      return res.status(404).json({ error: 'Recipe not found.' });
+    res
+      .attachment(`recipe-${req.params.id}.toml`)
+      .type('application/toml')
+      .set('X-Content-Type-Options', 'nosniff')
+      .send(rows[0].toml);
   });
   async function validate(req, res, next) {
     let recipe;

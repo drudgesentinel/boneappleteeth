@@ -25,6 +25,10 @@ Open http://localhost:5173. To use an existing database, set `DATABASE_URL` in `
 - `npm run format`: format the repository.
 - `npm run seed:test-user`: create the local-only test account `foo` / `bar`.
 
+## Recipe TOML files
+
+Sign in and choose **Import recipe TOML** to add a recipe from a `.toml` file (up to 100 KB). Use **Download TOML** on any recipe to save its stored document, or start with the [example recipe](assets/example-recipe.toml). Ingredient names display before their quantities.
+
 ## Manage accounts
 
 On the VPS, run these from your root SSH session to create `sean` or update their password:

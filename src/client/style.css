@@ -483,3 +483,23 @@ h3 small {
   padding-bottom: 16px;
   margin-bottom: 16px;
 }
+
+.toml-import {
+  margin-top: 18px;
+  font-size: 12px;
+}
+.toml-import label {
+  display: block;
+  margin-bottom: 8px;
+}
+.toml-import a,
+.download-toml {
+  color: #435e38;
+  font-size: 12px;
+}
+.detail-top {
+  flex-wrap: wrap;
+}
+.detail-top .eyebrow {
+  margin-right: auto;
+}

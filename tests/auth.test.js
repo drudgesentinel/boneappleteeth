@@ -1,3 +1,4 @@
+import { readFile } from 'node:fs/promises';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createApp } from '../src/server/app.js';
@@ -63,6 +64,10 @@ function database() {
         };
         recipes.push(row);
         rows = [row];
+      } else if (sql.startsWith('SELECT toml FROM recipes')) {
+        rows = recipes
+          .filter((recipe) => recipe.id === args[0])
+          .map(({ toml }) => ({ toml }));
       } else if (sql.startsWith('SELECT recipes.*')) {
         assert.match(sql, /LEFT JOIN users/);
         rows = recipes.map((r) => ({
@@ -254,4 +259,89 @@ test('proxy trust is opt-in and restricted to loopback', async () => {
     if (previous === undefined) delete process.env.TRUST_PROXY;
     else process.env.TRUST_PROXY = previous;
   }
+});
+
+test('TOML file import and public downloads preserve the backend document', async (t) => {
+  const server = (await createApp(database())).listen(0, '127.0.0.1');
+  await new Promise((resolve) => server.once('listening', resolve));
+  t.after(() => new Promise((resolve) => server.close(resolve)));
+  const base = `http://127.0.0.1:${server.address().port}`;
+  const example = await readFile(
+    new URL('../assets/example-recipe.toml', import.meta.url),
+    'utf8',
+  );
+  const sample = await fetch(base + '/api/recipes/example.toml');
+  assert.equal(sample.status, 200);
+  assert.match(sample.headers.get('content-type'), /^application\/toml/);
+  assert.match(
+    sample.headers.get('content-disposition'),
+    /attachment;.*example-recipe.toml/,
+  );
+  assert.equal(await sample.text(), example);
+  const parsed = validateRecipe(example);
+  assert.equal(
+    parsed.ingredients.find((item) => item.name === 'Curry powder').quantity,
+    '1 tablespoon',
+  );
+  assert.ok(parsed.steps[0].includes('\n\n'));
+  async function importFile(toml, cookie) {
+    return fetch(base + '/api/recipes', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...(cookie ? { Cookie: cookie } : {}),
+      },
+      body: JSON.stringify({ toml }),
+    });
+  }
+  assert.equal((await importFile(example)).status, 401);
+  const registration = await fetch(base + '/api/auth/register', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      username: 'importer',
+      password: 'long-test-password',
+    }),
+  });
+  assert.equal(registration.status, 201);
+  const cookie = registration.headers.get('set-cookie').split(';')[0];
+  // Lots of quotes exercise JSON encoding overhead while staying below 100 KB TOML.
+  const source =
+    '# Café 🍛 "family favorite"\n# ' +
+    '"'.repeat(60000) +
+    '\n' +
+    example +
+    '\nsource = "Family cookbook"\n';
+  const imported = await importFile(source, cookie);
+  assert.equal(imported.status, 201);
+  const item = await imported.json();
+  assert.equal(item.author, 'importer');
+  assert.equal(item.toml, source);
+  assert.equal(item.recipe.source, 'Family cookbook');
+  const download = await fetch(`${base}/api/recipes/${item.id}/toml`);
+  assert.equal(download.status, 200);
+  assert.match(
+    download.headers.get('content-disposition'),
+    new RegExp(`attachment;.*recipe-${item.id}\\.toml`),
+  );
+  assert.match(
+    download.headers.get('content-type'),
+    /^application\/toml; charset=utf-8/,
+  );
+  assert.equal(download.headers.get('x-content-type-options'), 'nosniff');
+  assert.deepEqual(
+    Buffer.from(await download.arrayBuffer()),
+    Buffer.from(source),
+  );
+  assert.equal((await fetch(base + '/api/recipes/999/toml')).status, 404);
+  assert.equal((await fetch(base + '/api/recipes/not-an-id/toml')).status, 400);
+  for (const invalid of [
+    '',
+    'title = "',
+    'title = "Incomplete"',
+    '# ' + 'é'.repeat(50000),
+  ])
+    assert.equal((await importFile(invalid, cookie)).status, 400);
+  const list = await (await fetch(base + '/api/recipes')).json();
+  assert.equal(list.length, 1, 'Invalid imports must not create recipes');
 });

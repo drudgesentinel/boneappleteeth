@@ -149,6 +149,14 @@ Set `TRUST_PROXY=loopback` in `/etc/hotdogcart/hotdogcart.env` when using the su
 
 Run `npm run seed:test-user` to create or reset username `foo` with password `bar` in the local database configured by `.env`. The command initializes missing database tables before seeding, so the app does not need to run first. This fixture is blocked for production and remote databases. New registrations still require at least 12 password characters; login accepts the short test password.
 
+### TOML import and export
+
+The collection's **Import recipe TOML** file picker reads a UTF-8 `.toml` file and submits it to `POST /api/recipes` as JSON `{ "toml": "..." }`. Import requires sign-in and creates a new recipe owned by the current user; it never overwrites an existing recipe. TOML must contain the same required fields as a form submission. The backend validates its syntax, recipe fields, image ownership, and 100,000-byte document limit before saving. The JSON request limit allows for escaping overhead.
+
+**Download TOML** uses `GET /api/recipes/:id/toml`, which returns the stored document as an `application/toml` attachment named `recipe-<id>.toml`. Downloads are public, like recipe browsing. Original comments, formatting, multiline instructions, extra metadata, and text quantities/costs are preserved. Editing through the structured form regenerates the document and removes comments as before.
+
+[assets/example-recipe.toml](assets/example-recipe.toml) contains a vegetable curry example based on the collection's curry recipe, with free-text quantities and multiline instructions. `GET /api/recipes/example.toml` serves it as a downloadable template. Image paths reference existing account-owned uploads; a TOML download does not include image bytes. Upload a new image after importing, or remove an image path that is not owned by your account.
+
 ### Recipe format
 
 ```toml

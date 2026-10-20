@@ -1,0 +1,54 @@
+# Example based on the vegetable curry in the recipe collection.
+# Import this file to add a new recipe. Comments and formatting are saved.
+title = "Vegetable coconut curry"
+description = "A flexible coconut curry with vegetables, inspired by the Instant Pot Vaguely Thai Curry recipe."
+tags = ["vegetarian", "curry"]
+servings = 4
+minutes = 30
+# Optional inspiration link:
+# reference = "https://example.com/recipes/curry"
+
+ingredients = [
+  { name = "Onion", quantity = "1" },
+  { name = "Garlic", quantity = "To taste" },
+  { name = "Bell pepper", quantity = "1" },
+  { name = "Broccoli florets", quantity = "1-2 cups" },
+  { name = "Zucchini", quantity = "1 small" },
+  { name = "Kale or spinach", quantity = "1-2 cups" },
+  { name = "Tomatoes", quantity = "1 can, or 1-2 fresh" },
+  { name = "Coconut milk (full fat)", quantity = "1 can" },
+  { name = "Chili pepper", quantity = "To taste" },
+  { name = "Curry powder", quantity = "1 tablespoon" },
+  { name = "Salt", quantity = "a pinch" },
+  { name = "Olive oil", quantity = "1 tablespoon" },
+]
+
+steps = [
+  """
+Saute the aromatics.
+
+Warm the olive oil in a pot. Cook the onion until softened, then add the garlic and chili pepper. Stir in the curry powder.
+""",
+  "Add the tomatoes and coconut milk. Bring to a gentle simmer.",
+  "Add the bell pepper, broccoli, and zucchini. Simmer until tender, adding the greens toward the end.",
+  "Season to taste and serve over rice or cauliflower rice.",
+]
+
+# Optional ingredient cost: add a cost table inside an ingredient above:
+# { name = "Onion", quantity = "1", cost = { amount = "1.99/pound", currency = "USD" } }
+# Amounts and quantities may be free text; costs are never automatically totaled.
+
+# Optional values per serving (replace these sample values with your own):
+# [nutrition]
+# calories_kcal = 350
+# protein_g = 8
+# carbs_g = 30
+# fat_g = 24
+
+# Optional total cost, supplied by the author:
+# [cost]
+# amount = "Around 12 for the pot"
+# currency = "USD"
+
+# Image paths refer to uploads owned by your account, not embedded image bytes.
+# Upload an image in the editor after importing; do not copy someone else's path.
