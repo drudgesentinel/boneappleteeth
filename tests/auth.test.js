@@ -239,3 +239,19 @@ test('HTTP authentication, recipe ownership, validation, and logout', async (t) 
   });
   assert.equal(crossOrigin.status, 415);
 });
+
+test('proxy trust is opt-in and restricted to loopback', async () => {
+  const previous = process.env.TRUST_PROXY;
+  try {
+    delete process.env.TRUST_PROXY;
+    assert.equal((await createApp(database())).get('trust proxy'), false);
+    process.env.TRUST_PROXY = 'loopback';
+    const trust = (await createApp(database())).get('trust proxy fn');
+    assert.equal(trust('127.0.0.1'), true);
+    assert.equal(trust('::1'), true);
+    assert.equal(trust('198.51.100.1'), false);
+  } finally {
+    if (previous === undefined) delete process.env.TRUST_PROXY;
+    else process.env.TRUST_PROXY = previous;
+  }
+});

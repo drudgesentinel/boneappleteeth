@@ -37,6 +37,7 @@ Run the `install` command only when first creating the file: it empties an exist
 
 ```dotenv
 DATABASE_URL=postgres://hotdogcart:REPLACE_WITH_REAL_PASSWORD@127.0.0.1:5432/hotdogcart
+TRUST_PROXY=loopback
 ```
 
 The unit supplies `NODE_ENV=production`, `HOST=127.0.0.1`, and `PORT=3000`. The environment file can override those values; retain loopback binding for the supplied Nginx setup. systemd reads the environment file, so the service does not need `/opt/hotdogcart/.env`.
@@ -109,7 +110,7 @@ Confirm `http://example.com` redirects to HTTPS, then check browsing, sign-in, a
 
 ### Client IP rate limiting
 
-The current Express app does not enable `trust proxy`. Its authentication limiter therefore sees the Nginx loopback address, so all visitors share one rate-limit bucket. The example forwards client IP headers, but using them requires an application change to trust only the local proxy (for example `app.set('trust proxy', 'loopback')` before installing authentication middleware). Keep the upstream private and account for this before public deployment. This configuration does not change application code.
+Set `TRUST_PROXY=loopback` in `/etc/hotdogcart/hotdogcart.env` when using the supplied Nginx configuration. Express then trusts forwarded client IPs only from loopback peers, allowing authentication rate limits to apply to each visitor. Nginx replaces incoming forwarded headers, and Express must remain bound to loopback. Leave this variable unset when exposing Express directly or using a different proxy topology.
 
 ### References
 

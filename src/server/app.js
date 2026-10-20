@@ -7,6 +7,8 @@ import { validateRecipe, recipeToToml } from './recipe.js';
 export async function createApp(pool) {
   const app = express();
   app.disable('x-powered-by');
+  if (process.env.TRUST_PROXY === 'loopback')
+    app.set('trust proxy', 'loopback');
   app.use(express.json({ limit: '110kb' }));
   app.use('/api', (req, res, next) => {
     res.set('Cache-Control', 'no-store');
