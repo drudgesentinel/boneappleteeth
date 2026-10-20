@@ -26,6 +26,7 @@ fi
 # Copy this helper to /tmp before invoking it so Git can safely replace its source.
 # Stop before changing files to avoid serving a mixture of application versions.
 on_failure() {
+  systemctl stop hotdogcart.service || true
   echo 'Update failed. hotdogcart remains stopped; fix the checkout/build before starting it.' >&2
 }
 trap on_failure ERR

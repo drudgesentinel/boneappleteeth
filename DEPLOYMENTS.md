@@ -2,6 +2,14 @@
 
 See [README.md](README.md) for quick local setup and common commands.
 
+## Current VPS
+
+The application runs at `https://hotdogcart.net` on Debian 13, under `hotdogcart.service` as the `hotdogcart` Linux account. Code is checked out in `/opt/hotdogcart`, and production settings are in `/etc/hotdogcart/hotdogcart.env` (`root:hotdogcart`, mode `0640`). PostgreSQL's `hotdogcart` role owns the `hotdogcart` database. Express and PostgreSQL listen only on loopback.
+
+Nginx uses `/etc/nginx/conf.d/hotdogcart.net.conf`; the certificate is under `/etc/letsencrypt/live/hotdogcart.net/`. `certbot.timer` handles renewal, with an Nginx validation/reload hook at `/etc/letsencrypt/renewal-hooks/deploy/hotdogcart-nginx`. The ACME account was registered without an email address; an administrator can add one with `certbot update_account --email ADDRESS`.
+
+Node.js 24 and its bundled npm are installed through the NodeSource APT repository. Nginx, PostgreSQL 17, Git, Certbot, and Certbot's Nginx plugin use Debian packages. Application code remains owned by root; the service account can read it but cannot update it. SSH in as an administrator to run updates. Keep database passwords and certificate keys on the VPS.
+
 ## Run Hotdogcart with systemd
 
 Use one application service: Express serves the built Svelte frontend from `dist/` and handles `/api` on the same port. Nginx handles public HTTPS and proxies to this service. Vite is a development server and does not run on the VPS. PostgreSQL and Nginx run as their own services.
