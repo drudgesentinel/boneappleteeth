@@ -1,0 +1,35 @@
+[Unit]
+Description=Hotdogcart recipe book and API
+Wants=network-online.target
+After=network-online.target postgresql.service
+
+[Service]
+Type=exec
+User=hotdogcart
+Group=hotdogcart
+WorkingDirectory=/opt/hotdogcart
+Environment=NODE_ENV=production
+Environment=HOST=127.0.0.1
+Environment=PORT=3000
+EnvironmentFile=/etc/hotdogcart/hotdogcart.env
+# Install Node.js 24 system-wide at this path; do not use root's nvm directory.
+ExecStart=/usr/bin/node /opt/hotdogcart/src/server/index.js
+Restart=on-failure
+RestartSec=5s
+TimeoutStopSec=30s
+UMask=0077
+
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+PrivateDevices=true
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectControlGroups=true
+RestrictSUIDSGID=true
+CapabilityBoundingSet=
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6
+
+[Install]
+WantedBy=multi-user.target

@@ -1,5 +1,5 @@
 {
-  "name": "boneappleteeth",
+  "name": "hotdogcart",
   "version": "0.1.0",
   "private": true,
   "type": "module",
@@ -13,7 +13,9 @@
     "test": "node --test",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "seed:test-user": "node --env-file=.env scripts/seed-test-user.js"
+    "seed:test-user": "node --env-file=.env scripts/seed-test-user.js",
+    "user:create": "node --env-file-if-exists=.env scripts/create-user.js",
+    "user:password": "node --env-file-if-exists=.env scripts/create-user.js --password"
   },
   "dependencies": {
     "express": "^5.1.0",

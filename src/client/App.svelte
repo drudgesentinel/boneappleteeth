@@ -207,8 +207,7 @@
 
 <div class="shell">
   <header>
-    <a class="brand" href="/"
-      >bone apple teeth<span>THE PERSONAL RECIPE BOOK</span></a
+    <a class="brand" href="/">hotdogcart<span>THE PERSONAL RECIPE BOOK</span></a
     >{#if user}<div class="account">
         <span>{user.username}</span><button
           onclick={logout}
@@ -667,7 +666,6 @@
     {/if}
   </main>
   <footer>
-    <span>BONE APPLE TEETH</span><span>For the love of a home-cooked meal.</span
-    >
+    <span>hotdogcart</span><span>For the love of a home-cooked meal.</span>
   </footer>
 </div>
