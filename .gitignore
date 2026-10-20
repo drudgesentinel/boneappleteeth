@@ -1,0 +1,36 @@
+# Local environment variables and secrets
+.env
+.env.*
+!.env.example
+!.env.*.example
+!.env.template
+.envrc
+
+# Local credentials and private keys
+.aws/
+.ssh/
+.pgpass
+.npmrc.local
+secrets/
+credentials/
+*.pem
+*.key
+*.p12
+*.pfx
+
+# Dependencies, builds, and test output
+node_modules/
+dist/
+coverage/
+.vite/
+
+# Logs and local database backups
+*.log
+npm-debug.log*
+backups/
+*.dump
+*.backup
+
+# Local operating-system files
+.DS_Store
+Thumbs.db
