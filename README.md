@@ -27,14 +27,21 @@ Open http://localhost:5173. To use an existing database, set `DATABASE_URL` in `
 
 ## Manage accounts
 
-With the database configured and the application started at least once:
+On the VPS, run these from your root SSH session to create `sean` or update their password:
 
 ```sh
-npm run user:create -- alice
-npm run user:password -- alice
+runuser -u hotdogcart -- /usr/bin/node \
+  --env-file=/etc/hotdogcart/hotdogcart.env \
+  /opt/hotdogcart/scripts/create-user.js sean
+
+runuser -u hotdogcart -- /usr/bin/node \
+  --env-file=/etc/hotdogcart/hotdogcart.env \
+  /opt/hotdogcart/scripts/create-user.js --password sean
 ```
 
-Both commands prompt for a hidden password and confirmation (12–128 characters). Password updates sign out existing sessions.
+These run as `hotdogcart` and load the production database configuration. Both prompt for a hidden password and confirmation (12–128 characters). Password updates sign out existing sessions.
+
+For local development with `DATABASE_URL` in `.env`, use `npm run user:create -- sean` and `npm run user:password -- sean` after the application has initialized the database.
 
 ## Deploy
 

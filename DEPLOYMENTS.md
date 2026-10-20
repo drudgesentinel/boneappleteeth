@@ -81,14 +81,18 @@ Run `sudo systemctl restart hotdogcart.service` after changing environment value
 
 ### Manage application accounts on the VPS
 
-Once the service has initialized the database schema, use the same environment file for the account tools. These commands run with the service account's privileges and prompt for hidden passwords:
+Once the service has initialized the database schema, run these commands from your root SSH session. `runuser` switches to the unprivileged `hotdogcart` account, and `--env-file` explicitly loads the production database configuration. Both commands prompt for hidden passwords:
 
 ```sh
-sudo -u hotdogcart /usr/bin/node --env-file=/etc/hotdogcart/hotdogcart.env /opt/hotdogcart/scripts/create-user.js alice
-sudo -u hotdogcart /usr/bin/node --env-file=/etc/hotdogcart/hotdogcart.env /opt/hotdogcart/scripts/create-user.js --password alice
+runuser -u hotdogcart -- /usr/bin/node \
+  --env-file=/etc/hotdogcart/hotdogcart.env \
+  /opt/hotdogcart/scripts/create-user.js sean
+runuser -u hotdogcart -- /usr/bin/node \
+  --env-file=/etc/hotdogcart/hotdogcart.env \
+  /opt/hotdogcart/scripts/create-user.js --password sean
 ```
 
-Password updates revoke existing sessions. These application accounts are separate from the Linux service account.
+Password updates revoke existing sessions. These application accounts are separate from the Linux service account. The application itself stays under systemd as `hotdogcart`; it does not run as root. The npm shortcuts only load a local `.env`, so using them without the production environment produces a missing `DATABASE_URL` error.
 
 See the systemd references for [service lifecycle](https://www.freedesktop.org/software/systemd/man/latest/systemd.service.html) and [execution settings](https://www.freedesktop.org/software/systemd/man/latest/systemd.exec.html).
 
@@ -218,11 +222,11 @@ Existing recipes without an owner remain publicly visible as “Unknown contribu
 
 Authentication attempts are limited per IP in each server process. For public deployment, use HTTPS and `NODE_ENV=production` for Secure cookies, and configure shared rate limiting if running multiple instances. The app binds to localhost by default; configure `HOST` and `PORT` for your environment. Account recovery is not implemented. Google Fonts are optional; local fallback fonts work offline.
 
-### Manually manage application accounts
+### Manually manage local application accounts
 
-Run `npm run user:create -- alice` from the application directory with Node.js 24. The utility reads `DATABASE_URL` from the environment or `.env` and prompts for a hidden password and confirmation. Usernames and passwords follow the registration rules. It inserts a new account with the application's scrypt password hashing; duplicate usernames fail without changing existing accounts. The database schema must already be initialized by the application. This creates an application login, not a Linux account.
+For local development, run `npm run user:create -- alice` from the application directory with Node.js 24. The utility reads `DATABASE_URL` from the environment or `.env` and prompts for a hidden password and confirmation. Usernames and passwords follow the registration rules. It inserts a new account with the application's scrypt password hashing; duplicate usernames fail without changing existing accounts. The database schema must already be initialized by the application. This creates an application login, not a Linux account.
 
-Create an account named `alice`:
+On the VPS, use the [production commands](#manage-application-accounts-on-the-vps) instead. Create a local account named `alice`:
 
 ```sh
 npm run user:create -- alice
